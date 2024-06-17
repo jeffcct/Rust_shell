@@ -47,6 +47,8 @@ fn handle_types(input: Vec<&str>) -> String {
 
 fn handle_none(x: &str, rest: Vec<&str>) -> String {
     let path = std::env::var("PATH").unwrap();
+    let location = format!("{}/{}", std::env::current_dir().unwrap().display(), x);
+    println!("{}", location);
 
     match path.split(":").map(|path| format!("{}/{}", path, x)).find(|path|std::fs::metadata(path).is_ok()) {
         Some(path) => { 
@@ -56,8 +58,17 @@ fn handle_none(x: &str, rest: Vec<&str>) -> String {
                     Err(_) => format!("{}", "Format of function must be string"),
                 }
             }
-        _ => { return format!("{}: command not found", x.trim()); }
-
+        _ => { 
+            if !std::fs::metadata(&location).is_ok() {
+                return format!("{}: command not found", x.trim());
+            } else {
+                let out = Command::new(&location).args(rest).output().expect("failed to execute process");
+                match std::str::from_utf8(&out.stdout) {
+                    Ok(val) => format!("{}", val.to_string().trim()),
+                    Err(_) => format!("{}", "Format of function must be string"),
+                }
+            }
+        }
     }
 }
 
